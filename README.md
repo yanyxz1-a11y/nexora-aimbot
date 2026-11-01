@@ -15,8 +15,8 @@ local ESPESSURA = 2
 
 -- Configurações de Smooth (Velocidade/Força do Lock)
 local SMOOTH_MIN = 1       -- Mais suave / lento
-local SMOOTH_MAX = 30      -- Mais forte / rápido
-local SMOOTH_INICIAL = 8
+local SMOOTH_MAX = 80      -- Aumentado para 80 (permite mira muito mais rápida e firme)
+local SMOOTH_INICIAL = 15  -- Valor inicial padrão mais responsivo
 
 local CORES = {
 	Color3.fromRGB(255, 0, 0),     -- Vermelho
@@ -52,6 +52,29 @@ screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- ===== Círculo FOV (Instanciado no topo para estar acessível a todos os botões) =====
+local bola = Instance.new("Frame")
+bola.Name = "FOV"
+bola.Size = UDim2.fromOffset(tamanhoAtual, tamanhoAtual)
+bola.AnchorPoint = Vector2.new(0.5, 0.5)
+bola.Position = UDim2.new(0.5, 0, 0.5, 0)
+bola.BackgroundTransparency = 1
+bola.BorderSizePixel = 0
+bola.ZIndex = 5
+bola.Visible = false
+bola.Parent = screenGui
+Instance.new("UICorner", bola).CornerRadius = UDim.new(0.5, 0)
+
+local contorno = Instance.new("UIStroke")
+contorno.Color = CORES[corSelecionada]
+contorno.Thickness = ESPESSURA
+contorno.Parent = bola
+
+local function atualizarVisibilidadeFOV()
+	bola.Visible = ativo and mostrarFOV
+end
+
+-- ===== Painel de Controle =====
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(LARGURA_PAINEL, ALTURA_PAINEL)
 frame.Position = UDim2.fromOffset(20, 200)
@@ -201,7 +224,7 @@ for i, cor in ipairs(CORES) do
 	sw.Position = UDim2.fromOffset(inicioX + (i - 1) * (TAM_SWATCH + ESPACO), 174)
 	sw.BackgroundColor3 = cor
 	sw.BorderColor3 = Color3.fromRGB(255, 255, 255)
-	sw.BorderSizePixel = 0
+	sw.BorderSizePixel = (i == corSelecionada) and 2 or 0
 	sw.Text = ""
 	sw.AutoButtonColor = true
 	sw.Parent = conteudo
@@ -242,28 +265,6 @@ botaoTeam.TextSize = 13
 botaoTeam.Text = "Team Check: ON"
 botaoTeam.Parent = conteudo
 Instance.new("UICorner", botaoTeam).CornerRadius = UDim.new(0, 8)
-
--- ===== Círculo FOV =====
-local bola = Instance.new("Frame")
-bola.Name = "FOV"
-bola.Size = UDim2.fromOffset(tamanhoAtual, tamanhoAtual)
-bola.AnchorPoint = Vector2.new(0.5, 0.5)
-bola.Position = UDim2.new(0.5, 0, 0.5, 0)
-bola.BackgroundTransparency = 1
-bola.BorderSizePixel = 0
-bola.ZIndex = 5
-bola.Visible = false
-bola.Parent = screenGui
-Instance.new("UICorner", bola).CornerRadius = UDim.new(0.5, 0)
-
-local contorno = Instance.new("UIStroke")
-contorno.Color = CORES[corSelecionada]
-contorno.Thickness = ESPESSURA
-contorno.Parent = bola
-
-local function atualizarVisibilidadeFOV()
-	bola.Visible = ativo and mostrarFOV
-end
 
 -- ===== Atualização de Sliders =====
 local function pctDoMouse(barraTarget: Frame, x: number): number
@@ -368,12 +369,10 @@ end)
 local function ehAliado(outroPlayer: Player): boolean
 	if not teamCheck then return false end
 
-	-- Verificação por objeto Team (Roblox padrão)
 	if player.Team ~= nil and outroPlayer.Team ~= nil then
 		return player.Team == outroPlayer.Team
 	end
 
-	-- Verificação por cor do time (usado em muitos jogos de FPS)
 	if player.TeamColor ~= nil and outroPlayer.TeamColor ~= nil then
 		return player.TeamColor == outroPlayer.TeamColor
 	end
@@ -399,7 +398,6 @@ end
 
 -- ===== Detecção no FOV =====
 local function jogadorNoFOV(p: Player): boolean
-	-- Ignora aliados se o Team Check estiver ligado
 	if ehAliado(p) then return false end
 
 	local char = p.Character
